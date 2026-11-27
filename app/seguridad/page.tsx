@@ -1,1 +1,0 @@
-import type { Metadata } from 'next'; import { SafetySection } from '@/components/info-sections'; export const metadata: Metadata = { title: 'Confianza y seguridad', description: 'Medidas y recomendaciones para contratar servicios de limpieza con más tranquilidad.' }; export default function Page() { return <SafetySection />; }

@@ -1,0 +1,632 @@
+{
+  "entities": {
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Delegated administrator record keyed by lowercase verified email.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 160
+        },
+        "addedBy": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 160
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["email", "addedBy", "note", "createdAt"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User account and onboarding profile stored at /users/{uid}. Accessible by owner or verified admin.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 160
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "firstName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "lastName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "photoURL": {
+          "type": "string",
+          "maxLength": 45000
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "role": {
+          "type": "string",
+          "enum": ["client", "professional"]
+        },
+        "country": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 60
+        },
+        "state": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "city": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "neighborhood": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "postalCode": {
+          "type": "string",
+          "maxLength": 10
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 600
+        },
+        "contactPreference": {
+          "type": "string",
+          "enum": ["WhatsApp", "Llamada", "Correo"]
+        },
+        "profileCompleted": {
+          "type": "boolean"
+        },
+        "googleLinked": {
+          "type": "boolean"
+        },
+        "suspended": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "email",
+        "displayName",
+        "firstName",
+        "lastName",
+        "photoURL",
+        "phone",
+        "role",
+        "country",
+        "state",
+        "city",
+        "neighborhood",
+        "postalCode",
+        "description",
+        "contactPreference",
+        "profileCompleted",
+        "googleLinked",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "CleanerListing": {
+      "title": "CleanerListing",
+      "description": "Public professional profile and service advertisement in Mexico.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "businessName": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "headline": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 120
+        },
+        "bio": {
+          "type": "string",
+          "minLength": 15,
+          "maxLength": 600
+        },
+        "state": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "city": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "colonias": {
+          "type": "array"
+        },
+        "services": {
+          "type": "array"
+        },
+        "hourlyRateMxn": {
+          "type": "number"
+        },
+        "fixedServiceRateMxn": {
+          "type": "number"
+        },
+        "minHours": {
+          "type": "number"
+        },
+        "yearsExperience": {
+          "type": "number"
+        },
+        "includesSupplies": {
+          "type": "boolean"
+        },
+        "availability": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 80
+        },
+        "photoUrl": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 45000
+        },
+        "portfolioUrls": {
+          "type": "array"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "paused", "suspended"]
+        },
+        "profileCompleted": {
+          "type": "boolean"
+        },
+        "ratingAvg": {
+          "type": "number"
+        },
+        "reviewsCount": {
+          "type": "number"
+        },
+        "completedCount": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "displayName",
+        "businessName",
+        "headline",
+        "bio",
+        "state",
+        "city",
+        "colonias",
+        "services",
+        "hourlyRateMxn",
+        "fixedServiceRateMxn",
+        "minHours",
+        "yearsExperience",
+        "includesSupplies",
+        "availability",
+        "photoUrl",
+        "portfolioUrls",
+        "status",
+        "profileCompleted",
+        "ratingAvg",
+        "reviewsCount",
+        "completedCount",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Private hiring request between a client and a cleaning specialist.",
+      "type": "object",
+      "properties": {
+        "clientId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "clientName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "clientPhone": {
+          "type": "string",
+          "minLength": 7,
+          "maxLength": 20,
+          "pattern": "^[0-9+\\-\\s()]{7,20}$"
+        },
+        "cleanerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "cleanerName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "cleanerOwnerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "listingSource": {
+          "type": "string",
+          "enum": ["catalog", "community"]
+        },
+        "city": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "coloniaAddress": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 180
+        },
+        "serviceType": {
+          "type": "string",
+          "enum": ["Hogar", "Profunda", "Oficina", "Airbnb", "Post-obra", "Planchado"]
+        },
+        "propertySize": {
+          "type": "string",
+          "enum": ["Departamento (1-2 rec.)", "Casa (3+ rec.)", "Oficina / Local"]
+        },
+        "scheduledDate": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "scheduledTime": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 10
+        },
+        "durationHours": {
+          "type": "number"
+        },
+        "hourlyRateMxn": {
+          "type": "number"
+        },
+        "totalMxn": {
+          "type": "number"
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "confirmed", "completed", "cancelled"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "clientId",
+        "clientName",
+        "clientPhone",
+        "cleanerId",
+        "cleanerName",
+        "cleanerOwnerId",
+        "listingSource",
+        "city",
+        "coloniaAddress",
+        "serviceType",
+        "propertySize",
+        "scheduledDate",
+        "scheduledTime",
+        "durationHours",
+        "hourlyRateMxn",
+        "totalMxn",
+        "notes",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "Public verified review linked to an active/completed booking.",
+      "type": "object",
+      "properties": {
+        "cleanerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "bookingId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "authorId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "authorName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "rating": {
+          "type": "number"
+        },
+        "serviceType": {
+          "type": "string",
+          "enum": ["Hogar", "Profunda", "Oficina", "Airbnb", "Post-obra", "Planchado"]
+        },
+        "comment": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 500
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "cleanerId",
+        "bookingId",
+        "authorId",
+        "authorName",
+        "rating",
+        "serviceType",
+        "comment",
+        "createdAt"
+      ]
+    },
+    "UserPreferences": {
+      "title": "UserPreferences",
+      "description": "Private saved favorites for an authenticated user.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "favoriteCleanerIds": {
+          "type": "array"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["userId", "favoriteCleanerIds", "updatedAt"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Immutable append-only audit trail of administrative actions performed in AdminPanelView.",
+      "type": "object",
+      "properties": {
+        "actorUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "actorEmail": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 160
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "promote_admin",
+            "revoke_admin",
+            "suspend_user",
+            "reactivate_user",
+            "change_user_role",
+            "delete_user",
+            "change_cleaner_status",
+            "delete_cleaner",
+            "change_booking_status",
+            "delete_booking",
+            "delete_review",
+            "export_csv",
+            "seed_demo_data"
+          ]
+        },
+        "targetType": {
+          "type": "string",
+          "enum": ["admin", "user", "cleaner", "booking", "review", "export"]
+        },
+        "targetId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "targetLabel": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 260
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "actorUid",
+        "actorEmail",
+        "action",
+        "targetType",
+        "targetId",
+        "targetLabel",
+        "summary",
+        "createdAt"
+      ]
+    },
+    "VerificationRecord": {
+      "title": "VerificationRecord",
+      "description": "Non-PII identity verification badge summary generated by the server-side INE inspection tool.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["verified", "rejected"]
+        },
+        "method": {
+          "type": "string",
+          "enum": ["INE_AI"]
+        },
+        "verificationId": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 64
+        },
+        "confidenceScore": {
+          "type": "number"
+        },
+        "vigenciaYear": {
+          "type": "number"
+        },
+        "maskedCurp": {
+          "type": "string",
+          "maxLength": 24
+        },
+        "summary": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "verifiedAt": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "status",
+        "method",
+        "verificationId",
+        "confidenceScore",
+        "vigenciaYear",
+        "maskedCurp",
+        "summary",
+        "verifiedAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/admins/{adminEmail}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Delegated administrators managed by super-admin."
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private onboarding and account profile owned strictly by {userId}."
+    },
+    "/cleaners/{cleanerId}": {
+      "schema": { "$ref": "#/entities/CleanerListing" },
+      "description": "Public professional directory and service advertisements."
+    },
+    "/bookings/{bookingId}": {
+      "schema": { "$ref": "#/entities/Booking" },
+      "description": "Private booking requests between clients and professionals."
+    },
+    "/reviews/{reviewId}": {
+      "schema": { "$ref": "#/entities/Review" },
+      "description": "Public reviews linked to confirmed or completed bookings."
+    },
+    "/users/{userId}/private/preferences": {
+      "schema": { "$ref": "#/entities/UserPreferences" },
+      "description": "Private saved cleaner favorites per user."
+    },
+    "/auditLogs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "Immutable admin audit log entries for database moderation actions."
+    },
+    "/verifications/{userId}": {
+      "schema": { "$ref": "#/entities/VerificationRecord" },
+      "description": "Public verification badge state without raw INE images or sensitive PII."
+    }
+  }
+}

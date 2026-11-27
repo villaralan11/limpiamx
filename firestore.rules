@@ -1,33 +1,682 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /profiles/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
     }
 
-    match /listings/{listingId} {
-      allow read: if resource.data.status == 'published' || (request.auth != null && resource.data.ownerId == request.auth.uid);
-      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
-      allow update, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
+    // -------------------------------------------------------------------------
+    // Global Hardened Primitives & Admin RBAC
+    // -------------------------------------------------------------------------
+    function incoming() {
+      return request.resource.data;
     }
 
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAuthenticatedAccount() {
+      return isSignedIn()
+        && request.auth.token.firebase.sign_in_provider != 'anonymous'
+        && request.auth.token.email is string
+        && request.auth.token.email.size() >= 3;
+    }
+
+    function isBootstrappedSuperAdmin() {
+      return isVerifiedUser()
+        && request.auth.token.email == 'villaralan11@gmail.com';
+    }
+
+    function isDelegatedAdmin() {
+      return isVerifiedUser()
+        && request.auth.token.email is string
+        && exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
+    }
+
+    function isAdmin() {
+      return isBootstrappedSuperAdmin() || isDelegatedAdmin();
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidEmailKey(email) {
+      return email is string
+        && email.size() >= 5
+        && email.size() <= 160
+        && email.matches('^[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}$');
+    }
+
+    function isValidImageUrl(url) {
+      return url is string
+        && url.size() <= 45000
+        && (
+          url == '' ||
+          url.matches('^(https://|/src/assets/images/|data:image/(jpeg|png|webp);base64,).*')
+        );
+    }
+
+    function isValidServiceList(services) {
+      return services is list
+        && services.size() >= 1
+        && services.size() <= 6
+        && services.hasOnly(['Hogar', 'Profunda', 'Oficina', 'Airbnb', 'Post-obra', 'Planchado']);
+    }
+
+    function isValidColoniasList(colonias) {
+      return colonias is list
+        && colonias.size() >= 1
+        && colonias.size() <= 8
+        && colonias[0] is string
+        && colonias[0].size() >= 2
+        && colonias[0].size() <= 60;
+    }
+
+    function isValidPortfolioList(urls) {
+      return urls is list
+        && urls.size() <= 4
+        && (urls.size() == 0 || isValidImageUrl(urls[0]));
+    }
+
+    // -------------------------------------------------------------------------
+    // Entity Validation Blueprints
+    // -------------------------------------------------------------------------
+    function isValidAdminUser(data) {
+      return data.keys().hasAll(['email', 'addedBy', 'note', 'createdAt'])
+        && data.keys().hasOnly(['email', 'addedBy', 'note', 'createdAt'])
+        && isValidEmailKey(data.email)
+        && isValidEmailKey(data.addedBy)
+        && data.note is string && data.note.size() <= 120
+        && data.createdAt is timestamp;
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll([
+          'uid', 'email', 'displayName', 'firstName', 'lastName', 'photoURL',
+          'phone', 'role', 'country', 'state', 'city', 'neighborhood',
+          'postalCode', 'description', 'contactPreference', 'profileCompleted',
+          'googleLinked', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'uid', 'email', 'displayName', 'firstName', 'lastName', 'photoURL',
+          'phone', 'role', 'country', 'state', 'city', 'neighborhood',
+          'postalCode', 'description', 'contactPreference', 'profileCompleted',
+          'googleLinked', 'suspended', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.uid)
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 160
+        && data.displayName is string && data.displayName.size() >= 2 && data.displayName.size() <= 120
+        && data.firstName is string && data.firstName.size() >= 1 && data.firstName.size() <= 60
+        && data.lastName is string && data.lastName.size() >= 1 && data.lastName.size() <= 80
+        && isValidImageUrl(data.photoURL)
+        && data.phone is string && data.phone.size() <= 20
+        && (data.phone == '' || data.phone.matches('^[0-9+\\-\\s()]{7,20}$'))
+        && data.role in ['client', 'professional']
+        && data.country is string && data.country.size() >= 2 && data.country.size() <= 60
+        && data.state is string && data.state.size() >= 2 && data.state.size() <= 80
+        && data.city is string && data.city.size() >= 2 && data.city.size() <= 80
+        && data.neighborhood is string && data.neighborhood.size() >= 2 && data.neighborhood.size() <= 80
+        && data.postalCode is string && data.postalCode.size() <= 10
+        && (data.postalCode == '' || data.postalCode.matches('^[0-9]{4,6}$'))
+        && data.description is string && data.description.size() <= 600
+        && data.contactPreference in ['WhatsApp', 'Llamada', 'Correo']
+        && data.profileCompleted is bool
+        && data.googleLinked is bool
+        && (!('suspended' in data) || data.suspended is bool)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCleanerListing(data) {
+      return data.keys().hasAll([
+          'ownerId', 'displayName', 'businessName', 'headline', 'bio',
+          'state', 'city', 'colonias', 'services', 'hourlyRateMxn',
+          'fixedServiceRateMxn', 'minHours', 'yearsExperience',
+          'includesSupplies', 'availability', 'photoUrl', 'portfolioUrls',
+          'status', 'profileCompleted', 'ratingAvg', 'reviewsCount',
+          'completedCount', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId', 'displayName', 'businessName', 'headline', 'bio',
+          'state', 'city', 'colonias', 'services', 'hourlyRateMxn',
+          'fixedServiceRateMxn', 'minHours', 'yearsExperience',
+          'includesSupplies', 'availability', 'photoUrl', 'portfolioUrls',
+          'status', 'profileCompleted', 'ratingAvg', 'reviewsCount',
+          'completedCount', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.ownerId)
+        && data.displayName is string && data.displayName.size() >= 2 && data.displayName.size() <= 80
+        && data.businessName is string && data.businessName.size() <= 80
+        && data.headline is string && data.headline.size() >= 5 && data.headline.size() <= 120
+        && data.bio is string && data.bio.size() >= 15 && data.bio.size() <= 600
+        && data.state is string && data.state.size() >= 2 && data.state.size() <= 80
+        && data.city is string && data.city.size() >= 2 && data.city.size() <= 80
+        && isValidColoniasList(data.colonias)
+        && isValidServiceList(data.services)
+        && data.hourlyRateMxn is number && data.hourlyRateMxn >= 120 && data.hourlyRateMxn <= 1500
+        && data.fixedServiceRateMxn is number && data.fixedServiceRateMxn >= 0 && data.fixedServiceRateMxn <= 20000
+        && data.minHours is number && data.minHours >= 2 && data.minHours <= 8
+        && data.yearsExperience is number && data.yearsExperience >= 0 && data.yearsExperience <= 50
+        && data.includesSupplies is bool
+        && data.availability is string && data.availability.size() >= 3 && data.availability.size() <= 80
+        && data.photoUrl is string && data.photoUrl.size() >= 5 && isValidImageUrl(data.photoUrl)
+        && isValidPortfolioList(data.portfolioUrls)
+        && data.status in ['active', 'paused', 'suspended']
+        && data.profileCompleted is bool
+        && data.ratingAvg is number && data.ratingAvg >= 0 && data.ratingAvg <= 5
+        && data.reviewsCount is number && data.reviewsCount >= 0 && data.reviewsCount <= 10000
+        && data.completedCount is number && data.completedCount >= 0 && data.completedCount <= 50000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCatalogCleanerId(id) {
+      return id in [
+        'cat_guadalupe',
+        'cat_carlos',
+        'cat_fernanda',
+        'cat_rodrigo',
+        'cat_paola_eca',
+        'cat_hector_eca',
+        'cat_veronica_eca',
+        'cat_miguel_eca',
+        'cat_marisol',
+        'cat_diego_gdl',
+        'cat_lucia_gdl',
+        'cat_raul_gdl',
+        'cat_javier',
+        'cat_claudia_mty',
+        'cat_arturo_mty',
+        'cat_brenda_mty',
+        'cat_elena',
+        'cat_mateo_pue',
+        'cat_patricia_pue',
+        'cat_daniel_pue',
+        'cat_sofia',
+        'cat_andres_qro',
+        'cat_monica_qro',
+        'cat_ivan_qro',
+        'cat_karla_mid',
+        'cat_eduardo_mid',
+        'cat_norma_mid',
+        'cat_jorge_mid'
+      ];
+    }
+
+    function isValidBooking(data) {
+      return data.keys().hasAll([
+          'clientId', 'clientName', 'clientPhone', 'cleanerId', 'cleanerName',
+          'cleanerOwnerId', 'listingSource', 'city', 'coloniaAddress',
+          'serviceType', 'propertySize', 'scheduledDate', 'scheduledTime',
+          'durationHours', 'hourlyRateMxn', 'totalMxn', 'notes', 'status',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'clientId', 'clientName', 'clientPhone', 'cleanerId', 'cleanerName',
+          'cleanerOwnerId', 'listingSource', 'city', 'coloniaAddress',
+          'serviceType', 'propertySize', 'scheduledDate', 'scheduledTime',
+          'durationHours', 'hourlyRateMxn', 'totalMxn', 'notes', 'status',
+          'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.clientId)
+        && data.clientName is string && data.clientName.size() >= 2 && data.clientName.size() <= 80
+        && data.clientPhone is string && data.clientPhone.size() >= 7 && data.clientPhone.size() <= 20
+        && data.clientPhone.matches('^[0-9+\\-\\s()]{7,20}$')
+        && isValidId(data.cleanerId)
+        && data.cleanerName is string && data.cleanerName.size() >= 2 && data.cleanerName.size() <= 80
+        && isValidId(data.cleanerOwnerId)
+        && data.listingSource in ['catalog', 'community']
+        && data.city is string && data.city.size() >= 2 && data.city.size() <= 80
+        && data.coloniaAddress is string && data.coloniaAddress.size() >= 4 && data.coloniaAddress.size() <= 180
+        && data.serviceType in ['Hogar', 'Profunda', 'Oficina', 'Airbnb', 'Post-obra', 'Planchado']
+        && data.propertySize in ['Departamento (1-2 rec.)', 'Casa (3+ rec.)', 'Oficina / Local']
+        && data.scheduledDate is string && data.scheduledDate.size() == 10
+        && data.scheduledDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && data.scheduledTime is string && data.scheduledTime.size() >= 4 && data.scheduledTime.size() <= 10
+        && data.durationHours is number && data.durationHours >= 2 && data.durationHours <= 10
+        && data.hourlyRateMxn is number && data.hourlyRateMxn >= 120 && data.hourlyRateMxn <= 1500
+        && data.totalMxn is number && data.totalMxn >= 240 && data.totalMxn <= 15000
+        && data.totalMxn == data.durationHours * data.hourlyRateMxn
+        && data.notes is string && data.notes.size() <= 400
+        && data.status in ['pending', 'confirmed', 'completed', 'cancelled']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidReview(data) {
+      return data.keys().hasAll([
+          'cleanerId', 'bookingId', 'authorId', 'authorName', 'rating',
+          'serviceType', 'comment', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'cleanerId', 'bookingId', 'authorId', 'authorName', 'rating',
+          'serviceType', 'comment', 'createdAt'
+        ])
+        && isValidId(data.cleanerId)
+        && isValidId(data.bookingId)
+        && isValidId(data.authorId)
+        && data.authorName is string && data.authorName.size() >= 2 && data.authorName.size() <= 80
+        && data.rating is number && data.rating >= 1 && data.rating <= 5
+        && data.serviceType in ['Hogar', 'Profunda', 'Oficina', 'Airbnb', 'Post-obra', 'Planchado']
+        && data.comment is string && data.comment.size() >= 10 && data.comment.size() <= 500
+        && data.createdAt is timestamp;
+    }
+
+    function isValidUserPreferences(data) {
+      return data.keys().hasAll(['userId', 'favoriteCleanerIds', 'updatedAt'])
+        && data.keys().hasOnly(['userId', 'favoriteCleanerIds', 'updatedAt'])
+        && isValidId(data.userId)
+        && data.favoriteCleanerIds is list
+        && data.favoriteCleanerIds.size() <= 30
+        && (data.favoriteCleanerIds.size() == 0 || isValidId(data.favoriteCleanerIds[0]))
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAuditLog(data) {
+      return data.keys().hasAll([
+          'actorUid', 'actorEmail', 'action', 'targetType', 'targetId',
+          'targetLabel', 'summary', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'actorUid', 'actorEmail', 'action', 'targetType', 'targetId',
+          'targetLabel', 'summary', 'createdAt'
+        ])
+        && isValidId(data.actorUid)
+        && isValidEmailKey(data.actorEmail)
+        && data.action in [
+          'promote_admin', 'revoke_admin', 'suspend_user', 'reactivate_user',
+          'change_user_role', 'delete_user', 'change_cleaner_status',
+          'delete_cleaner', 'change_booking_status', 'delete_booking',
+          'delete_review', 'export_csv', 'seed_demo_data'
+        ]
+        && data.targetType in ['admin', 'user', 'cleaner', 'booking', 'review', 'export']
+        && data.targetId is string && data.targetId.size() >= 1 && data.targetId.size() <= 160
+        && data.targetLabel is string && data.targetLabel.size() >= 1 && data.targetLabel.size() <= 160
+        && data.summary is string && data.summary.size() >= 4 && data.summary.size() <= 260
+        && data.createdAt is timestamp;
+    }
+
+    function isValidVerificationRecord(data) {
+      return data.keys().hasAll([
+          'uid', 'status', 'method', 'verificationId', 'confidenceScore',
+          'vigenciaYear', 'maskedCurp', 'summary', 'verifiedAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'uid', 'status', 'method', 'verificationId', 'confidenceScore',
+          'vigenciaYear', 'maskedCurp', 'summary', 'verifiedAt', 'updatedAt'
+        ])
+        && isValidId(data.uid)
+        && data.status in ['verified', 'rejected']
+        && data.method == 'INE_AI'
+        && data.verificationId is string && data.verificationId.size() >= 4 && data.verificationId.size() <= 64
+        && data.confidenceScore is number && data.confidenceScore >= 0 && data.confidenceScore <= 100
+        && data.vigenciaYear is number && data.vigenciaYear >= 0 && data.vigenciaYear <= 2100
+        && data.maskedCurp is string && data.maskedCurp.size() <= 24
+        && data.summary is string && data.summary.size() <= 300
+        && data.verifiedAt is string && data.verifiedAt.size() <= 40
+        && data.updatedAt is timestamp;
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection: /admins/{adminEmail} (Admin RBAC Management)
+    // -------------------------------------------------------------------------
+    match /admins/{adminEmail} {
+      allow get: if isValidEmailKey(adminEmail) && (
+        (isVerifiedUser() && request.auth.token.email == adminEmail) ||
+        isAdmin()
+      );
+      allow list: if isAdmin();
+
+      allow create: if isAdmin()
+        && isValidEmailKey(adminEmail)
+        && adminEmail != 'villaralan11@gmail.com'
+        && isValidAdminUser(incoming())
+        && incoming().email == adminEmail
+        && incoming().addedBy == request.auth.token.email
+        && incoming().createdAt == request.time;
+
+      allow update: if false;
+
+      allow delete: if isBootstrappedSuperAdmin()
+        && isValidEmailKey(adminEmail)
+        && adminEmail != 'villaralan11@gmail.com';
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection: /users/{userId} (Owner + Admin Isolation)
+    // -------------------------------------------------------------------------
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (
+        request.auth.uid == userId || isAdmin()
+      );
+      allow list: if isAdmin();
+
+      allow create: if (isAuthenticatedAccount() || isAdmin())
+        && isValidId(userId)
+        && isValidUserProfile(incoming())
+        && incoming().uid == userId
+        && incoming().googleLinked is bool
+        && incoming().get('suspended', false) == false
+        && (
+          (
+            request.auth.uid == userId
+            && incoming().email == request.auth.token.email
+            && incoming().createdAt == request.time
+            && incoming().updatedAt == request.time
+          ) || (
+            isAdmin()
+            && userId.matches('^demo_[a-zA-Z0-9_\\-]+$')
+            && incoming().createdAt <= request.time
+            && incoming().updatedAt <= request.time
+          )
+        );
+
+      allow update: if (isAuthenticatedAccount() || isAdmin())
+        && isValidId(userId)
+        && isValidUserProfile(incoming())
+        && incoming().uid == existing().uid
+        && incoming().email == existing().email
+        && incoming().googleLinked == existing().googleLinked
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          (
+            request.auth.uid == userId &&
+            existing().get('suspended', false) == false &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'displayName', 'firstName', 'lastName', 'photoURL', 'phone',
+              'role', 'country', 'state', 'city', 'neighborhood', 'postalCode',
+              'description', 'contactPreference', 'profileCompleted', 'updatedAt'
+            ])
+          ) ||
+          (
+            isAdmin() &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'suspended', 'role', 'updatedAt'
+            ])
+          )
+        );
+
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection: /cleaners/{cleanerId} (Public Service Listings + Admin Moderation)
+    // -------------------------------------------------------------------------
+    match /cleaners/{cleanerId} {
+      allow get: if isValidId(cleanerId) && (
+        existing().status == 'active' ||
+        (isSignedIn() && existing().ownerId == request.auth.uid) ||
+        isAdmin()
+      );
+
+      allow list: if existing().status == 'active' ||
+        (isSignedIn() && existing().ownerId == request.auth.uid) ||
+        isAdmin();
+
+      allow create: if (isAuthenticatedAccount() || isAdmin())
+        && isValidId(cleanerId)
+        && isValidCleanerListing(incoming())
+        && (
+          (
+            incoming().ownerId == request.auth.uid
+            && incoming().status in ['active', 'paused']
+            && incoming().profileCompleted == true
+            && incoming().reviewsCount == 0
+            && incoming().completedCount == 0
+            && incoming().ratingAvg == 5
+            && incoming().createdAt == request.time
+            && incoming().updatedAt == request.time
+            && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+            && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'professional'
+            && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileCompleted == true
+            && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('suspended', false) == false
+          ) || (
+            isAdmin()
+            && cleanerId.matches('^cat_[a-zA-Z0-9_\\-]+$')
+            && incoming().ownerId.matches('^demo_[a-zA-Z0-9_\\-]+$')
+            && incoming().status in ['active', 'paused']
+            && incoming().profileCompleted == true
+            && incoming().createdAt <= request.time
+            && incoming().updatedAt <= request.time
+          )
+        );
+
+      allow update: if (isAuthenticatedAccount() || isAdmin())
+        && isValidId(cleanerId)
+        && isValidCleanerListing(incoming())
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          (
+            existing().ownerId == request.auth.uid &&
+            existing().status != 'suspended' &&
+            incoming().status in ['active', 'paused'] &&
+            (
+              incoming().diff(existing()).affectedKeys().hasOnly([
+                'displayName', 'businessName', 'headline', 'bio', 'state', 'city',
+                'colonias', 'services', 'hourlyRateMxn', 'fixedServiceRateMxn',
+                'minHours', 'yearsExperience', 'includesSupplies', 'availability',
+                'photoUrl', 'portfolioUrls', 'status', 'profileCompleted', 'updatedAt'
+              ]) ||
+              incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+            )
+          ) ||
+          (
+            isAdmin() &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+          )
+        );
+
+      allow delete: if (isAuthenticatedAccount() || isAdmin())
+        && isValidId(cleanerId)
+        && (existing().ownerId == request.auth.uid || isAdmin());
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection: /bookings/{bookingId} (Private Hiring Requests + Admin Oversight)
+    // -------------------------------------------------------------------------
     match /bookings/{bookingId} {
-      allow create: if request.auth != null && request.resource.data.clientId == request.auth.uid;
-      allow read, update: if request.auth != null && resource.data.clientId == request.auth.uid;
-      allow delete: if request.auth != null && resource.data.clientId == request.auth.uid;
+      allow get: if isSignedIn()
+        && isValidId(bookingId)
+        && (
+          existing().clientId == request.auth.uid ||
+          existing().cleanerOwnerId == request.auth.uid ||
+          isAdmin()
+        );
+
+      allow list: if isSignedIn() && (
+        existing().clientId == request.auth.uid ||
+        existing().cleanerOwnerId == request.auth.uid ||
+        isAdmin()
+      );
+
+      allow create: if (isAuthenticatedAccount() || isAdmin())
+        && isValidId(bookingId)
+        && isValidBooking(incoming())
+        && (
+          (
+            incoming().clientId == request.auth.uid
+            && incoming().status == 'pending'
+            && incoming().createdAt == request.time
+            && incoming().updatedAt == request.time
+            && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+            && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileCompleted == true
+            && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('suspended', false) == false
+            && (
+              (
+                incoming().listingSource == 'catalog' &&
+                incoming().cleanerOwnerId == 'catalog' &&
+                isValidCatalogCleanerId(incoming().cleanerId)
+              ) || (
+                incoming().listingSource == 'community' &&
+                exists(/databases/$(database)/documents/cleaners/$(incoming().cleanerId)) &&
+                get(/databases/$(database)/documents/cleaners/$(incoming().cleanerId)).data.ownerId == incoming().cleanerOwnerId
+              )
+            )
+          ) || (
+            isAdmin()
+            && bookingId.matches('^demo_bk_[a-zA-Z0-9_\\-]+$')
+            && incoming().clientId.matches('^demo_[a-zA-Z0-9_\\-]+$')
+            && incoming().createdAt <= request.time
+            && incoming().updatedAt <= request.time
+          )
+        );
+
+      allow update: if (isAuthenticatedAccount() || isAdmin())
+        && isValidId(bookingId)
+        && isValidBooking(incoming())
+        && incoming().clientId == existing().clientId
+        && incoming().cleanerId == existing().cleanerId
+        && incoming().cleanerOwnerId == existing().cleanerOwnerId
+        && incoming().listingSource == existing().listingSource
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+        && (
+          isAdmin() ||
+          (
+            !(existing().status in ['completed', 'cancelled']) &&
+            (
+              (
+                existing().cleanerOwnerId == request.auth.uid &&
+                existing().status == 'pending' &&
+                incoming().status in ['confirmed', 'cancelled']
+              ) ||
+              (
+                existing().clientId == request.auth.uid &&
+                existing().status in ['pending', 'confirmed'] &&
+                incoming().status == 'cancelled'
+              ) ||
+              (
+                (
+                  existing().clientId == request.auth.uid ||
+                  existing().cleanerOwnerId == request.auth.uid
+                ) &&
+                (
+                  existing().status == 'confirmed' ||
+                  (existing().listingSource == 'catalog' && existing().status == 'pending')
+                ) &&
+                incoming().status == 'completed'
+              )
+            )
+          )
+        );
+
+      allow delete: if isAdmin() && isValidId(bookingId);
     }
 
-    match /favorites/{favoriteId} {
-      allow read, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
-      allow update: if request.auth != null && resource.data.ownerId == request.auth.uid && request.resource.data.ownerId == request.auth.uid;
+    // -------------------------------------------------------------------------
+    // Collection: /reviews/{reviewId} (Booking-Linked Public Reviews + Admin Delete)
+    // -------------------------------------------------------------------------
+    match /reviews/{reviewId} {
+      allow get: if isValidId(reviewId);
+      allow list: if true;
+
+      allow create: if (isAuthenticatedAccount() || isAdmin())
+        && isValidId(reviewId)
+        && isValidReview(incoming())
+        && (
+          (
+            incoming().authorId == request.auth.uid
+            && incoming().createdAt == request.time
+            && exists(/databases/$(database)/documents/bookings/$(incoming().bookingId))
+            && get(/databases/$(database)/documents/bookings/$(incoming().bookingId)).data.clientId == request.auth.uid
+            && get(/databases/$(database)/documents/bookings/$(incoming().bookingId)).data.cleanerId == incoming().cleanerId
+            && get(/databases/$(database)/documents/bookings/$(incoming().bookingId)).data.status in ['confirmed', 'completed']
+          ) || (
+            isAdmin()
+            && reviewId.matches('^rev_cat_[a-zA-Z0-9_\\-]+$')
+            && incoming().authorId.matches('^demo_[a-zA-Z0-9_\\-]+$')
+            && incoming().createdAt <= request.time
+          )
+        );
+
+      allow update: if false;
+
+      allow delete: if (isAuthenticatedAccount() || isAdmin())
+        && isValidId(reviewId)
+        && (existing().authorId == request.auth.uid || isAdmin());
     }
 
-    match /reports/{reportId} {
-      allow create: if request.auth != null && request.resource.data.reporterId == request.auth.uid;
-      allow read: if request.auth != null && resource.data.reporterId == request.auth.uid;
-      allow update, delete: if false;
+    // -------------------------------------------------------------------------
+    // Collection: /users/{userId}/private/preferences (Strict User Isolation)
+    // -------------------------------------------------------------------------
+    match /users/{userId}/private/preferences {
+      allow get: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow list: if false;
+
+      allow create: if isAuthenticatedAccount()
+        && isValidId(userId)
+        && request.auth.uid == userId
+        && isValidUserPreferences(incoming())
+        && incoming().userId == request.auth.uid
+        && incoming().updatedAt == request.time;
+
+      allow update: if isAuthenticatedAccount()
+        && isValidId(userId)
+        && request.auth.uid == userId
+        && isValidUserPreferences(incoming())
+        && incoming().userId == existing().userId
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['favoriteCleanerIds', 'updatedAt']);
+
+      allow delete: if isAuthenticatedAccount() && isValidId(userId) && request.auth.uid == userId;
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection: /auditLogs/{logId} (Immutable Admin Audit Trail)
+    // -------------------------------------------------------------------------
+    match /auditLogs/{logId} {
+      allow get: if isAdmin() && isValidId(logId);
+      allow list: if isAdmin();
+
+      allow create: if isAdmin()
+        && isValidId(logId)
+        && isValidAuditLog(incoming())
+        && incoming().actorUid == request.auth.uid
+        && incoming().actorEmail == request.auth.token.email
+        && incoming().createdAt == request.time;
+
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection: /verifications/{userId} (Public Non-PII INE Badge Status)
+    // -------------------------------------------------------------------------
+    match /verifications/{userId} {
+      allow get: if isValidId(userId);
+      allow list: if true;
+
+      allow create: if isAuthenticatedAccount()
+        && isValidId(userId)
+        && request.auth.uid == userId
+        && isValidVerificationRecord(incoming())
+        && incoming().uid == request.auth.uid
+        && incoming().updatedAt == request.time;
+
+      allow update: if isAuthenticatedAccount()
+        && isValidId(userId)
+        && request.auth.uid == userId
+        && isValidVerificationRecord(incoming())
+        && incoming().uid == existing().uid
+        && incoming().updatedAt == request.time;
+
+      allow delete: if isAdmin() && isValidId(userId);
     }
   }
 }

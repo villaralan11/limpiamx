@@ -1,0 +1,55 @@
+{
+  "name": "LimpiaMX — Personal de limpieza de confianza en México",
+  "short_name": "LimpiaMX",
+  "description": "Marketplace para contratar personal de limpieza verificado en CDMX, Ecatepec, Guadalajara, Monterrey, Puebla, Querétaro y Mérida.",
+  "lang": "es-MX",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f8fafc",
+  "theme_color": "#0f766e",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Cotizar mi limpieza",
+      "url": "/index.html#/cotizador",
+      "description": "Calcula el costo estimado de tu limpieza"
+    },
+    {
+      "name": "Mis reservas",
+      "url": "/index.html#/mis-reservas",
+      "description": "Revisa tus reservas y el código de la puerta"
+    },
+    {
+      "name": "Guías y precios",
+      "url": "/index.html#/blog",
+      "description": "Guías de limpieza y precios reales"
+    }
+  ]
+}

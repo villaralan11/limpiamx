@@ -1,0 +1,8 @@
+{
+  "name": "LimpiaMX",
+  "description": "Marketplace en México para contratar personal de limpieza verificado y anunciar servicios de limpieza para hogar, oficina y Airbnb.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

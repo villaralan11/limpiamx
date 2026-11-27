@@ -1,50 +1,62 @@
 # LimpiaMX
 
-Reconstrucción desde cero del marketplace LimpiaMX a partir de una maqueta de referencia. La versión nueva usa Next.js App Router, TypeScript, Tailwind CSS, Firebase preparado para Google/Gmail y una dirección visual editorial inspirada en Apple.
+Marketplace para contratar y anunciar servicios de limpieza en México (CDMX, Ecatepec, Guadalajara, Monterrey, Puebla, Querétaro y Mérida).
 
-## Requisitos
+Proyecto escolar con fines demostrativos. Parte del contenido (perfiles, reseñas y cifras) es de ejemplo.
 
-Node.js 22 o superior y pnpm 11.
+## Stack
 
-## Instalación
+React 19 · TypeScript · Vite · Tailwind CSS 4 · Firebase (Auth, Firestore, Storage) · Google Maps Platform · Recharts
+
+## Estructura del sitio
+
+Navegación por hash (`#/planes`, `#/faq`…), así que cada página se puede compartir y funciona el botón Atrás.
+
+| Ruta | Contenido |
+|---|---|
+| `#/explorar` (inicio) | Hero, cifras, servicios, catálogo, cómo funciona, seguridad, reseñas, planes, preguntas frecuentes y llamado para profesionales |
+| `#/profesional/<id>` | Página pública de cada profesional (link compartible con botón "Compartir por WhatsApp") |
+| `#/limpieza-en-<ciudad>` | Página local por ciudad: precios promedio reales, pros, colonias, consejos y FAQ (7 ciudades) |
+| `#/cotizador` | Cotizador: m², recámaras y baños → horas y rango de precio con tarifas reales del catálogo |
+| `#/blog` · `#/blog/<slug>` | Guías: precios de limpieza profunda en CDMX, checklist previo y rotación de Airbnb |
+| `#/planes` | Planes y modelo de ingresos |
+| `#/nosotros` | Sobre nosotros |
+| `#/seguridad` | Confianza y seguridad (verificación INE, código de puerta, pagos) |
+| `#/faq` | Preguntas frecuentes |
+| `#/contacto` | Formulario de contacto (abre el correo del usuario) |
+| `#/terminos` · `#/privacidad` | Páginas legales (modelo, requieren revisión de un abogado) |
+| `#/anunciate` · `#/mis-reservas` · `#/mi-perfil` | Requieren sesión con Google |
+| (cualquier otra ruta) | Página 404 con ilustración y accesos rápidos |
+
+## Funciones de producto (nuevo en esta versión)
+
+- **Verificación de identidad (INE):** el profesional sube su INE en *Mi perfil*; al aprobarse muestra la insignia "Verificado" en todas las vistas. Demo local (localStorage) — ver plan.
+- **Código de seguridad en la puerta:** cada reserva genera un código de 6 dígitos determinista que cliente y profesional ven en Mis reservas.
+- **Pago protegido en la app:** hoja de pago con Stripe/Conekta/Mercado Pago (simulada), comisión 8% y garantía de reposición hasta $2,500 MXN.
+- **Chat y notificaciones por reserva:** chat por reserva + panel de actividad con avisos por WhatsApp/correo prellenados.
+- **Calendario de disponibilidad:** próximos 14 días por profesional en el modal de reserva + agenda semanal en el panel pro.
+- **Reportes y emergencia:** reportar perfil o reseña desde cualquier tarjeta y botón flotante de emergencia (911 + correo).
+- **PWA instalable:** manifest + service worker + iconos (`public/icons`), solo en build de producción.
+- **Botón flotante de WhatsApp** y **páginas 404/estados vacíos** con ilustraciones propias.
+
+> El plan para pasar cada función a producción está en [PLAN_INTEGRACION.md](./PLAN_INTEGRACION.md).
+
+## Editar contenido
+
+Todo el texto editorial (FAQ, planes, consejos de seguridad, correo de contacto y número de WhatsApp) está en `src/data/siteContent.ts`.
+Antes de publicar, cambia `SITE.contactEmail` y `SITE.whatsappNumber`.
+
+## Correr en local
 
 ```bash
-pnpm install
-cp .env.example .env.local
-pnpm dev
+npm install --legacy-peer-deps
+cp .env.example .env.local   # agrega VITE_GOOGLE_MAPS_API_KEY
+npm run dev                  # http://localhost:3000
 ```
-
-La aplicación queda disponible en `http://localhost:3000`.
-
-## Variables de entorno
-
-`NEXT_PUBLIC_SITE_URL` debe contener la URL pública cuando exista. Mientras se use una URL temporal de Google AI Studio puede dejarse vacía o actualizarse con la URL asignada.
-
-`NEXT_PUBLIC_CONTACT_EMAIL` y `NEXT_PUBLIC_WHATSAPP_NUMBER` están centralizadas y usan valores provisionales heredados de la maqueta hasta recibir los definitivos.
-
-El proyecto incluye `firebase-applet-config.json` como respaldo de la configuración web pública que venía en la maqueta. Las variables `NEXT_PUBLIC_FIREBASE_*`, si se definen, tienen prioridad y permiten cambiar de proyecto sin tocar código. Agrega el dominio de preview/despliegue a **Authorized domains** en Firebase Authentication. Solo se muestra el botón Google; no hay contraseñas propias.
-
-Las áreas de cuenta escuchan la sesión Google y usan Firestore para perfiles, anuncios y solicitudes. Antes de producción, publica `firestore.rules` en el mismo proyecto desde Firebase CLI:
-
-```bash
-firebase deploy --only firestore:rules
-```
-
-El explorador incluye una vista **Mapa radar** funcional aun sin API externa: muestra profesionales por zona, permite buscar colonia, ajustar el radio y solicitar la ubicación del navegador. La variable opcional `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` queda documentada para activar Google Maps/Places cuando el proyecto tenga cuota y restricciones configuradas.
 
 ## Comandos
 
 ```bash
-pnpm dev       # desarrollo
-pnpm lint      # TypeScript sin emitir
-pnpm build     # build de producción
-pnpm start     # servidor de producción
+npm run lint    # revisión de tipos (tsc --noEmit)
+npm run build   # build de producción en dist/
 ```
-
-## Despliegue
-
-En Vercel: importa el repositorio, selecciona Next.js, configura las variables de entorno y despliega. En Google AI Studio, usa el mismo proyecto generado, define las variables públicas en la configuración del entorno y conserva el puerto 3000. Cuando tengas la URL temporal real, actualiza `NEXT_PUBLIC_SITE_URL`, agrega ese origen a Firebase Authentication y vuelve a generar el sitemap.
-
-## Próximos datos de producción
-
-Antes de publicar hay que sustituir el correo y WhatsApp provisionales, revisar términos y privacidad con asesoría legal, configurar Firebase Auth/Firestore/Storage y conectar el proveedor de correo o mensajería que se usará para reservas y notificaciones.
