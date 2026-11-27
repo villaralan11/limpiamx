@@ -1,0 +1,1 @@
+import type { Metadata } from 'next'; import { AboutSection } from '@/components/info-sections'; export const metadata: Metadata = { title: 'Sobre nosotros', description: 'Conoce la idea detrás de LimpiaMX, un marketplace local de limpieza en México.' }; export default function Page() { return <AboutSection />; }

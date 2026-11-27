@@ -1,0 +1,23 @@
+{
+  "routes": [
+    { "path": "/", "title": "LimpiaMX — Limpieza de confianza" },
+    { "path": "/explorar", "title": "Explorar profesionales — LimpiaMX" },
+    { "path": "/cotizador", "title": "Cotizador de limpieza — LimpiaMX" },
+    { "path": "/profesionales/:id", "title": "Perfil profesional — LimpiaMX" },
+    { "path": "/ciudades/:slug", "title": "Limpieza por ciudad — LimpiaMX" },
+    { "path": "/blog", "title": "Guías de limpieza — LimpiaMX" },
+    { "path": "/blog/:slug", "title": "Guía de limpieza — LimpiaMX" },
+    { "path": "/planes", "title": "Planes — LimpiaMX" },
+    { "path": "/nosotros", "title": "Sobre nosotros — LimpiaMX" },
+    { "path": "/seguridad", "title": "Seguridad — LimpiaMX" },
+    { "path": "/faq", "title": "Preguntas frecuentes — LimpiaMX" },
+    { "path": "/contacto", "title": "Contacto — LimpiaMX" },
+    { "path": "/terminos", "title": "Términos — LimpiaMX" },
+    { "path": "/privacidad", "title": "Privacidad — LimpiaMX" },
+    { "path": "/cuenta/reservas", "title": "Mis reservas — LimpiaMX" },
+    { "path": "/cuenta/favoritos", "title": "Mis favoritos — LimpiaMX" },
+    { "path": "/cuenta/perfil", "title": "Mi perfil — LimpiaMX" },
+    { "path": "/cuenta/publicar", "title": "Publicar servicio — LimpiaMX" },
+    { "path": "/admin", "title": "Administración — LimpiaMX" }
+  ]
+}

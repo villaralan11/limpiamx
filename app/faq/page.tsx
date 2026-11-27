@@ -1,0 +1,1 @@
+import type { Metadata } from 'next'; import { FaqSection } from '@/components/info-sections'; export const metadata: Metadata = { title: 'Preguntas frecuentes', description: 'Respuestas sobre costos, reservas, seguridad, ciudades y cómo ofrecer servicios en LimpiaMX.' }; export default function Page() { return <FaqSection />; }

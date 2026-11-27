@@ -1,0 +1,1 @@
+import type { Metadata } from 'next'; import { PlansSection } from '@/components/info-sections'; export const metadata: Metadata = { title: 'Planes para profesionales', description: 'Publica tus servicios de limpieza en LimpiaMX y elige cómo quieres crecer.' }; export default function Page() { return <PlansSection />; }
